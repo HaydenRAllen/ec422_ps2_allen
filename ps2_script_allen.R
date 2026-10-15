@@ -34,9 +34,49 @@ unemp <- unemp |>
     unemployment_rate = replace( 
       unemployment_rate,
       date == as.Date("2025-10-01"),
-      unemployment_raet[data == as.Date("2025-09-01")]
+      unemployment_rate[data == as.Date("2025-09-01")]
       )
   ) |>
   ungroup()
 
+unemp <- unemp |>
+  arrange(unemployment_rate, date) |>
+  group_by(date) |>
+  mutate(unemployment_rate_change = unemployment_rate - lag(unemployment_rate)) |>
+  ungroup()
 
+unemp_recent <- filter(unemp, date >= as.Date("2015-01-01"))
+
+unemp_summary <- unemp |>
+  group_by(region) |>
+  summarize(
+    mean_rate = mean(unemployment_rate, na.rm = TRUE),
+    min_rate = min(unemployment_rate, na.rm = TRUE),
+    max_rate = max(unemployment_rate, na.rm = TRUE)
+  )
+
+unemp_top_increases <- unemp |>
+  group_by(region) |>
+  slice_max(unemployment_rate_change, n = 5) |>
+  ungroup() |>
+  arrange(desc(unemployment_rate_change))
+
+unemp_top_decreases <- unemp |>
+  group_by(region) |>
+  slice_min(unemployment_rate_change, n = 5) |>
+  ungroup() |>
+  arrange(unemployment_rate_change)
+
+unemp_top_increases_no_covid <- unemp |>
+  filter(format(date, "%Y") != "2020") |>
+  group_by(region) |>
+  slice_max(unemployment_rate_change, n = 5) |>
+  ungroup() |>
+  arrange(desc(unemployment_rate_change))
+
+unemp_top_decreases_no_covid <- unemp |>
+  filter(format(date, "%Y") != "2020") |>
+  group_by(region) |>
+  slice_min(unemployment_rate_change, n = 5) |>
+  ungroup() |>
+  arrange(unemployment_rate_change)
