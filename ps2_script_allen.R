@@ -34,7 +34,7 @@ unemp <- unemp |>
     unemployment_rate = replace( 
       unemployment_rate,
       date == as.Date("2025-10-01"),
-      unemployment_rate[data == as.Date("2025-09-01")]
+      unemployment_rate[date == as.Date("2025-09-01")]
       )
   ) |>
   ungroup()
@@ -112,8 +112,9 @@ ggplot(unemp_covid, aes(x = date, y = unemployment_rate, color = region)) +
        x = "Date",
        y = "Unemployment Rate (%)") +
   theme_minimal()
-
-
+# For this graph I used the unemp_covid data frame, which filters the unemployment data 
+# to only include the year 2020. This allows us to focus on the impact of the COVID-19 
+# pandemic on unemployment rates across different regions. 
 
 
 

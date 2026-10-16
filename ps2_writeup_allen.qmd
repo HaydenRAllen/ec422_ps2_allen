@@ -1,0 +1,198 @@
+---
+title: "ps2_writeup_allen.qmd"
+author: "Hayden Allen"
+date: 10-14-2026
+format: 
+  html:
+    toc: true
+    embed-resources: true
+---
+
+## Report
+
+<https://github.com/HaydenRAllen/ec422_ps2_allen>
+
+```{r}
+#| echo: false
+
+library(tidyverse)
+library(knitr)
+```
+## Data
+
+The data is unemployment rates across the country (USA) and some specific states. It comes from the St. Louis Federal Reserve Bank (FRED) between the years 1976 - 2026. 
+
+```{r} 
+#| echo: false 
+
+unemp_raw = read_rds("data/unemp_raw.rds") 
+unemp <- unemp_raw |>
+  rename(unemployment_rate = price) |>
+  mutate(
+    region = case_when(
+      symbol == "UNRATE" ~ "United States",
+      symbol == "ORUR" ~ "Oregon",
+      symbol == "CAUR" ~ "California",
+      symbol == "TXUR" ~ "Texas",
+      symbol == "NYUR" ~ "New York"
+    )
+  )
+
+unemp <- unemp_raw |>
+  rename(unemployment_rate = price) |>
+  mutate(
+    region = case_when(
+      symbol == "UNRATE" ~ "United States",
+      symbol == "ORUR" ~ "Oregon",
+      symbol == "CAUR" ~ "California",
+      symbol == "TXUR" ~ "Texas",
+      symbol == "NYUR" ~ "New York"
+    )
+  )
+
+unemp <- unemp |>
+  arrange(region, date) |>
+  group_by(region) |>
+  mutate(
+    unemployment_rate = replace( 
+      unemployment_rate,
+      date == as.Date("2025-10-01"),
+      unemployment_rate[date == as.Date("2025-09-01")]
+      )
+  ) |>
+  ungroup()
+
+unemp <- unemp |>
+  arrange(unemployment_rate, date) |>
+  group_by(date) |>
+  mutate(unemployment_rate_change = unemployment_rate - lag(unemployment_rate)) |>
+  ungroup()
+
+head(unemp)
+
+```
+
+
+
+## Wrangling
+
+
+
+The table below is a few statistics using data from the unemployment data (mean rate, minimum rate, and maximum rate).
+```{r}
+#| echo: false
+unemp_summary <- unemp |>
+  group_by(region) |>
+  summarize(
+    mean_rate = mean(unemployment_rate, na.rm = TRUE),
+    min_rate = min(unemployment_rate, na.rm = TRUE),
+    max_rate = max(unemployment_rate, na.rm = TRUE)
+  )
+
+kable(unemp_summary)
+
+```
+
+
+
+The table below removes all data prior to 2015 and shows us only recent data.
+```{r}
+#| echo: false
+unemp_recent <- filter(unemp, date >= as.Date("2015-01-01"))
+unemp_recent_summary <- unemp_recent |>
+  group_by(region) |>
+  summarize(
+    mean_rate = mean(unemployment_rate, na.rm = TRUE),
+    min_rate = min(unemployment_rate, na.rm = TRUE),
+    max_rate = max(unemployment_rate, na.rm = TRUE)
+  )
+
+kable(unemp_recent_summary)
+
+```
+
+
+
+The table below shows us the top unemployment rate increases not including the year covid started.
+```{r}
+#| echo: false
+unemp_top_increases_no_covid <- unemp |>
+  filter(format(date, "%Y") != "2020") |>
+  group_by(region) |>
+  slice_max(unemployment_rate_change, n = 5) |>
+  ungroup() |>
+  arrange(desc(unemployment_rate_change))
+
+kable(unemp_top_increases_no_covid)
+
+```
+
+
+
+The table below shows us the top unemployment rate decreases not including the year covid started.
+```{r}
+#| echo: false
+unemp_top_decreases_no_covid <- unemp |>
+  filter(format(date, "%Y") != "2020") |>
+  group_by(region) |>
+  slice_min(unemployment_rate_change, n = 5) |>
+  ungroup() |>
+  arrange(unemployment_rate_change)
+
+kable(unemp_top_decreases_no_covid)
+
+```
+
+
+## Visualization
+
+```{r}
+#| echo: false
+ggplot(unemp, aes(x = date, y = unemployment_rate, color = region)) +
+  geom_line() +
+  labs(title = "Unemployment Rate Over Time",
+       x = "Date",
+       y = "Unemployment Rate (%)") +
+  theme_minimal()
+```
+The graph above is showing the unemployment rate over time for the different states/the entire country on one graph.
+```{r}
+#| echo: false
+ggplot(unemp, aes(x = date, y = unemployment_rate, color = region)) +
+  geom_line() +
+  facet_wrap(~ region) +
+  labs(title = "Unemployment Rate Over Time by Region",
+       x = "Date",
+       y = "Unemployment Rate (%)") +
+  theme_minimal()
+```
+The graph above shows the employment rate over time for the different states/the entire country on separate graphs.
+```{r}
+#| echo: false
+ggplot(unemp_summary, aes(x = (fct_reorder(region, mean_rate)), y = mean_rate)) +
+  geom_col(fill = "steelblue") +
+  labs(title = "Average Unemployment Rate by Region",
+       x = "Region",
+       y = "Average Unemployment Rate (%)") +
+  theme_minimal()
+```
+The graph above shows the average unemployment rate from 1976 to 2026 for the different states/the entire country.
+```{r}
+#| echo: false
+unemp_covid <- unemp |>
+  filter(format(date, "%Y") == "2020")
+ggplot(unemp_covid, aes(x = date, y = unemployment_rate, color = region)) +
+  geom_line() +
+  labs(title = "Unemployment Rate During COVID-19 Pandemic",
+       x = "Date",
+       y = "Unemployment Rate (%)") +
+  theme_minimal()
+```
+For this graph I used the unemp_covid data frame, which filters the unemployment data 
+to only include the year 2020. This allows us to focus on the impact of the COVID-19 
+pandemic on unemployment rates across different regions. You can notice that New York pea after everyone else.
+
+
+## Reflection
+
+The coding was pretty straightforward for the most part, but formatting the quarto document is a bit tedious. I forgot about echo and was wondering why my code was showing. I feel pretty comfortable committing and pushing to github now. I need to work more with github to get fully comfortable with it.
